@@ -25,6 +25,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Lets the app pick the minimal token scope (public_repo vs repo).
+          REPO_PRIVATE: ${{ github.event.repository.private }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

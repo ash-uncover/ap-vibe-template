@@ -14,17 +14,20 @@ deployed to **GitHub Pages**, that authenticates with a **GitHub PAT** and opera
 
 ## The four guarantees — do not break these
 
-1. **One repository reference.** The owner/repo the app targets lives only in
-   `src/config.ts` (`REPO`). Everything else — GitHub API URLs, the router `basename`,
-   Vite's `base`, the Pages URL — is *derived* from it. Never hardcode an owner or repo
-   name anywhere else. `vite.config.ts` imports this same module; keep it that way.
+1. **One resolved repository reference.** `src/config.ts` resolves the target owner/repo
+   **automatically** — build-time `__APP_REPO__` (from `GITHUB_REPOSITORY` in the Action, or
+   the git remote in dev), with a `*.github.io` runtime fallback. Everything derives from
+   `REPO`: GitHub API URLs, the router `basename`, Vite's `base`, the storage key. Never
+   hardcode an owner/repo anywhere, and **do not reintroduce a hand-edited constant** — a
+   repo copied from this template must work with zero edits.
 2. **PAT auth with read/write awareness.** All GitHub access goes through the token the
    user provides. Features that write (commits, PRs, issues…) must be gated on detected
    **write** access and disabled with an explanation when the token is read-only. Read
-   features must keep working with a read-only token. The scopes the app asks for live in
-   `TOKEN_SCOPES` in `src/config.ts` (which also builds the token-creation link) —
-   **adjust them to match what your app actually does, requesting the least privilege that
-   works**, and never hardcode a scope list elsewhere.
+   features must keep working with a read-only token. The scopes the app asks for are
+   resolved in `TOKEN_SCOPES` in `src/config.ts` (auto-selected by repo visibility —
+   `public_repo` public, `repo` private — and used to build the token-creation link).
+   **Widen them only if your app does more than repo-contents access, requesting the least
+   privilege that works**, and never hardcode a scope list elsewhere.
 3. **Minimal dependencies.** Prefer native `fetch` and the existing `github/` helpers over
    new packages. Add a dependency only when it is clearly the right tool, and say why.
 4. **Pages-safe routing.** The app is served under `/<repo>/`. Use the Router `basename`
@@ -35,7 +38,7 @@ deployed to **GitHub Pages**, that authenticates with a **GitHub PAT** and opera
 
 | Path             | Responsibility                                                        |
 |------------------|-----------------------------------------------------------------------|
-| `src/config.ts`  | `REPO`, `BASE_PATH`, `API_BASE` — the single source of truth.         |
+| `src/config.ts`  | Resolves `REPO` automatically; derives `API_BASE`, scopes, URLs.      |
 | `src/main.tsx`   | Entry point; mounts Router with `basename={BASE_PATH}`.               |
 | `src/App.tsx`    | Route table.                                                          |
 | `src/auth/`      | PAT login, `localStorage` persistence, write-access detection, context.|
@@ -60,8 +63,8 @@ Verify a change with `npm run build` before claiming it works; the build type-ch
    consistently — do not call `api.github.com` directly from components.
 3. For writes, check the auth context's write flag and disable the action when the token is
    read-only. Surface a clear reason, don't fail silently.
-4. Keep repository identity flowing from `REPO` — if you need another owner/repo, that is a
-   signal to extend `config.ts`, not to inline a string.
+4. Keep repository identity flowing from the resolved `REPO` — if you need another
+   owner/repo, that is a signal to extend `config.ts`, not to inline a string.
 
 ## Conventions
 

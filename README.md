@@ -9,9 +9,11 @@ at your own repository by editing a single config value, and start building your
 ## What you get
 
 - **React + React Router** app, built with **Vite** and written in **TypeScript**.
-- **Centralized repository reference** — the owner/repo the app operates on lives in
-  exactly one place (`src/config.ts`). Change it once and the whole app (API calls,
-  router base path, Pages URL, build `base`) follows.
+- **Zero-config repository reference** — the owner/repo the app operates on is **resolved
+  automatically** (from `GITHUB_REPOSITORY` in the deploy Action, the git remote during
+  local dev, or the `*.github.io` URL at runtime). A copied repo works with no edits, and
+  everything — API calls, router base path, Pages URL, build `base`, token scopes — follows
+  from it. It's all surfaced from one module, `src/config.ts`.
 - **GitHub PAT authentication** — the user signs in with a Personal Access Token.
   The app detects whether the token is **read-only** or has **write** access and
   adapts the UI accordingly.
@@ -36,16 +38,18 @@ right tool.
 
 ## Getting started (adopting the template)
 
-1. **Fork / create from template** into your own repository.
-2. **Point it at your repo** — edit the single source of truth in `src/config.ts`:
-   ```ts
-   export const REPO = { owner: 'your-user', repo: 'your-repo' } as const
-   ```
-   Nothing else needs to change for the app to target a different repository.
-3. **Enable GitHub Pages** — in the repo settings, set Pages **Source** to
-   **GitHub Actions**.
-4. **Push to `main`** — the deploy workflow publishes to
+1. **Create from template** — use GitHub's **"Use this template → Create a new repository"**
+   (the same account is fine). You get a clean repo with no fork relationship.
+2. **Enable GitHub Pages** — in the new repo, set Pages **Source** to **GitHub Actions**
+   (Settings → Pages).
+3. **Push to `main`** — the deploy workflow publishes to
    `https://<owner>.github.io/<repo>/`.
+
+**That's it — no config edits.** The repository reference resolves automatically (from
+`GITHUB_REPOSITORY` in the Action, or the git remote in local dev), and the token scope
+auto-selects `public_repo` for a public repo or `repo` for a private one. The only thing to
+revisit is `TOKEN_SCOPES` in `src/config.ts`, and only if your app needs **more** than
+repo-contents access (workflows, issues, org data…).
 
 ## Local development
 
@@ -65,13 +69,12 @@ login screen. The token is stored in `localStorage`.
   (`permissions.push`) or only **read** access, and reflects that in the UI.
 - Read features work with a read-only token; write features (committing changes) require a
   token with write access and are disabled otherwise.
-- The **required scopes live in one place** — `TOKEN_SCOPES` in `src/config.ts` — and the
-  login screen's "Create a token" link preselects them on GitHub's classic-token page.
-  **Adapt `TOKEN_SCOPES` to your app's needs** (least privilege): the template defaults to
-  `public_repo` (read/write contents of a public repo); a private repo needs `repo`, and an
-  app that does more (workflows, issues, org data) should request exactly the scopes it uses
-  — no more. For granular read-only-vs-write control, users can issue a fine-grained token
-  instead.
+- The **required scopes are resolved in one place** — `TOKEN_SCOPES` in `src/config.ts` —
+  and the login screen's "Create a token" link preselects them on GitHub's classic-token
+  page. They **auto-select by repository visibility**: `public_repo` for a public repo,
+  `repo` for a private one (least privilege for the repo-contents use case). **Widen
+  `TOKEN_SCOPES` only if your app does more** (workflows, issues, org data). For granular
+  read-only-vs-write control, users can issue a fine-grained token instead.
 
 > **Security note:** storing a PAT in `localStorage` is standard for a personal, client-side
 > GitHub tool, but the token is readable by any script running on the page. Use a
@@ -83,14 +86,14 @@ login screen. The token is stored in `localStorage`.
 - `.github/workflows/deploy.yml` builds the app and deploys it with the official Pages
   actions on push to `main`.
 - Because the app is served from a project subpath (`/<repo>/`), Vite's `base` and the
-  React Router `basename` are both derived from `REPO`.
+  React Router `basename` are both derived from the auto-resolved repo name.
 - A `404.html` fallback is emitted at build time so deep links resolve correctly on Pages.
 
 ## Project structure
 
 ```
 src/
-  config.ts          Centralized REPO reference (single source of truth)
+  config.ts          Repo reference — auto-resolved; derives API, base, scopes, URLs
   main.tsx           App entry, Router with basename
   App.tsx            Routes
   auth/              PAT login, token storage, read/write detection
